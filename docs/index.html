@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotify MCP — Model Context Protocol for 2026 Spotify Web API</title>
+  <meta name="description" content="A lean, 100% Python Model Context Protocol server for Spotify. Search tracks, manage libraries, and build playlists in a single AI turn.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Text:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Palette inspired by Google dark mode / Gemini interface */
+      --bg-base: #131314;
+      --bg-center: #1e1f20;
+      --surface-container-lowest: #0e0e0f;
+      --surface-container-low: #191a1b;
+      --surface-container: #202123;
+      --surface-container-high: #282a2c;
+      --surface-container-highest: #333538;
+      
+      --outline: rgba(255, 255, 255, 0.08);
+      --outline-subtle: rgba(255, 255, 255, 0.04);
+      --outline-focus: rgba(255, 255, 255, 0.2);
+
+      --text-primary: #e3e3e3;
+      --text-secondary: #9aa0a6;
+      --text-tertiary: #6b7280;
+      
+      --accent-blue: #8ab4f8;
+      --accent-blue-dot: #4285f4;
+      --accent-spotify: #1ed760;
+      --accent-spotify-subtle: rgba(30, 215, 96, 0.12);
+      
+      --font-display: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-text: 'Google Sans Text', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(ellipse at 50% 15%, var(--bg-center) 0%, var(--bg-base) 75%);
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-text);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(19, 19, 20, 0.75);
+      border-bottom: 1px solid var(--outline-subtle);
+    }
+
+    .nav-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0.9rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 1.05rem;
+      color: var(--text-primary);
+    }
+
+    .brand-mark {
+      width: 18px;
+      height: 18px;
+      background: var(--accent-spotify);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-mark svg {
+      width: 11px;
+      height: 11px;
+      fill: #000;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .btn-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.45rem 1rem;
+      border-radius: 9999px;
+      background: var(--surface-container-high);
+      color: var(--text-primary);
+      border: 1px solid var(--outline);
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      cursor: pointer;
+    }
+
+    .btn-chip:hover {
+      background: var(--surface-container-highest);
+      border-color: var(--outline-focus);
+    }
+
+    /* Hero / Interactive Command Center */
+    .hero {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 6.5rem 1.5rem 4rem;
+      text-align: center;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 4.5vw, 3.4rem);
+      font-weight: 400;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      margin-bottom: 2.2rem;
+    }
+
+    /* Gemini-Style Search Capsule */
+    .search-pill-container {
+      max-width: 660px;
+      margin: 0 auto 1.5rem;
+      position: relative;
+    }
+
+    .search-pill {
+      background: var(--surface-container-high);
+      border-radius: 9999px;
+      padding: 0.95rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border: 1px solid var(--outline);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .search-pill:focus-within, .search-pill:hover {
+      border-color: var(--outline-focus);
+      background: #2b2d30;
+    }
+
+    .pill-left {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      color: var(--text-secondary);
+      flex: 1;
+      text-align: left;
+      font-size: 1.02rem;
+    }
+
+    .blue-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-blue-dot);
+      flex-shrink: 0;
+    }
+
+    .pill-prompt {
+      color: var(--text-primary);
+      font-weight: 400;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pill-right {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+    }
+
+    .pill-model {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .pill-model:hover {
+      color: var(--text-primary);
+    }
+
+    .pill-mic {
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+
+    .pill-mic:hover {
+      color: var(--text-primary);
+    }
+
+    /* Segmented Action Chips */
+    .action-chips {
+      display: flex;
+      justify-content: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-bottom: 3.5rem;
+    }
+
+    .chip {
+      padding: 0.42rem 1rem;
+      border-radius: 9999px;
+      background: var(--surface-container);
+      color: var(--text-secondary);
+      border: 1px solid var(--outline-subtle);
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: var(--font-text);
+      user-select: none;
+    }
+
+    .chip:hover, .chip.active {
+      background: var(--surface-container-highest);
+      color: var(--text-primary);
+      border-color: var(--outline);
+    }
+
+    /* Simulation Output Card */
+    .sim-card {
+      background: var(--surface-container-low);
+      border: 1px solid var(--outline);
+      border-radius: 20px;
+      max-width: 740px;
+      margin: 0 auto;
+      text-align: left;
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .sim-header {
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--outline-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .sim-status {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      color: var(--accent-spotify);
+    }
+
+    .sim-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-spotify);
+    }
+
+    .sim-body {
+      padding: 1.35rem 1.4rem;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      line-height: 1.7;
+      color: #c4c7c5;
+      overflow-x: auto;
+    }
+
+    .sim-tag {
+      color: var(--accent-blue);
+      background: rgba(138, 180, 248, 0.1);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .sim-highlight {
+      color: var(--accent-spotify);
+    }
+
+    .sim-meta {
+      color: var(--text-tertiary);
+    }
+
+    /* Core Section Layout */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 4.5rem 1.5rem;
+    }
+
+    .section-title-wrap {
+      margin-bottom: 2.2rem;
+    }
+
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--accent-blue);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    .section-heading {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    /* Minimalist Cards Grid */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .minimal-card {
+      background: var(--surface-container);
+      border: 1px solid var(--outline-subtle);
+      border-radius: 16px;
+      padding: 1.6rem;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .minimal-card:hover {
+      background: var(--surface-container-high);
+      border-color: var(--outline);
+    }
+
+    .minimal-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    .minimal-card p {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    /* Clean Tools List */
+    .tool-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .tool-row {
+      background: var(--surface-container);
+      border: 1px solid var(--outline-subtle);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      transition: background 0.15s ease;
+    }
+
+    .tool-row:hover {
+      background: var(--surface-container-high);
+      border-color: var(--outline);
+    }
+
+    .tool-main {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .tool-title {
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .tool-desc {
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+    }
+
+    .tool-badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.22rem 0.6rem;
+      border-radius: 9999px;
+      background: var(--surface-container-highest);
+      color: var(--text-secondary);
+      border: 1px solid var(--outline-subtle);
+      white-space: nowrap;
+    }
+
+    .badge-read { color: var(--accent-blue); background: rgba(138, 180, 248, 0.08); }
+    .badge-write { color: #f28b82; background: rgba(242, 139, 130, 0.08); }
+    .badge-comp { color: var(--accent-spotify); background: rgba(30, 215, 96, 0.08); }
+
+    /* Clean Setup Steps */
+    .setup-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .setup-card {
+      background: var(--surface-container);
+      border: 1px solid var(--outline-subtle);
+      border-radius: 14px;
+      padding: 1.35rem 1.5rem;
+    }
+
+    .setup-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .setup-step {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--surface-container-highest);
+      padding: 0.15rem 0.55rem;
+      border-radius: 6px;
+    }
+
+    .setup-title {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .setup-code {
+      background: var(--surface-container-lowest);
+      border: 1px solid var(--outline-subtle);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      color: #e3e3e3;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+
+    /* Comparison / Migrations */
+    .migration-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .migration-item {
+      background: var(--surface-container);
+      border: 1px solid var(--outline-subtle);
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+    }
+
+    .migration-label {
+      font-size: 0.78rem;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.4rem;
+    }
+
+    .migration-old {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #9aa0a6;
+      text-decoration: line-through;
+      margin-bottom: 0.2rem;
+    }
+
+    .migration-new {
+      font-family: var(--font-mono);
+      font-size: 0.86rem;
+      color: var(--accent-spotify);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--outline-subtle);
+      padding: 3.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: 0.86rem;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+    }
+
+    footer a:hover {
+      color: var(--text-primary);
+    }
+
+    /* Floating Background Music Player Pill (Mini-DJ Console) */
+    .music-pill {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 1000;
+      background: var(--surface-container-high);
+      border: 1px solid var(--outline);
+      border-radius: 9999px;
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.14s cubic-bezier(0.2, 0, 0, 1);
+      font-family: var(--font-text);
+      font-size: 0.82rem;
+      user-select: none;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      outline: none;
+      overflow: hidden;
+    }
+
+    .music-pill:hover {
+      background: var(--surface-container-highest);
+      border-color: var(--outline-focus);
+      transform: translateY(-2px);
+    }
+
+    .music-pill:active {
+      transform: scale(0.96) translateY(0);
+    }
+
+    .music-pill:focus-visible {
+      border-color: var(--accent-spotify);
+      box-shadow: 0 0 0 2px var(--accent-spotify-subtle);
+    }
+
+    .music-pill.mixing {
+      border-color: rgba(138, 180, 248, 0.45);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 18px rgba(138, 180, 248, 0.16);
+    }
+
+    .music-pill.beat-drop {
+      border-color: rgba(30, 215, 96, 0.75);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 24px rgba(30, 215, 96, 0.28);
+      animation: djDropPulse 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes djDropPulse {
+      0% { transform: scale(1); }
+      30% { transform: scale(1.045); }
+      100% { transform: scale(1); }
+    }
+
+    .dj-mix-bar {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 0;
+      height: 2px;
+      background: transparent;
+      border-radius: 2px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .dj-mix-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-spotify));
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .music-pill.mixing .dj-mix-fill,
+    .music-pill.beat-drop .dj-mix-fill {
+      opacity: 1;
+    }
+
+    .equalizer {
+      display: flex;
+      align-items: flex-end;
+      gap: 2.5px;
+      width: 18px;
+      height: 14px;
+    }
+
+    .equalizer-bar {
+      width: 2.5px;
+      background: var(--accent-spotify);
+      border-radius: 2px;
+      height: 4px;
+      transition: height 0.15s ease, background 0.15s ease;
+    }
+
+    .music-pill.fft-active .equalizer-bar {
+      animation: none !important;
+      transition: height 0.05s linear, background 0.15s ease;
+    }
+
+    .music-pill.mixing .equalizer-bar {
+      background: var(--accent-blue);
+    }
+
+    .music-pill.playing:not(.fft-active) .equalizer-bar:nth-child(1) {
+      animation: bounce 0.8s ease-in-out infinite alternate;
+    }
+    .music-pill.playing:not(.fft-active) .equalizer-bar:nth-child(2) {
+      animation: bounce 1.1s ease-in-out infinite alternate 0.2s;
+    }
+    .music-pill.playing:not(.fft-active) .equalizer-bar:nth-child(3) {
+      animation: bounce 0.9s ease-in-out infinite alternate 0.4s;
+    }
+    .music-pill.playing:not(.fft-active) .equalizer-bar:nth-child(4) {
+      animation: bounce 0.75s ease-in-out infinite alternate 0.15s;
+    }
+
+    @keyframes bounce {
+      0% { height: 3px; }
+      100% { height: 13px; }
+    }
+
+    .music-info {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.25;
+      text-align: left;
+      pointer-events: none;
+      min-width: 130px;
+    }
+
+    .music-track {
+      color: var(--text-primary);
+      font-weight: 500;
+      font-size: 0.83rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 210px;
+    }
+
+    .music-sub {
+      color: var(--text-tertiary);
+      font-size: 0.72rem;
+      transition: color 0.15s ease;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .music-pill.playing .music-sub {
+      color: var(--accent-spotify);
+    }
+
+    .music-pill.mixing .music-sub {
+      color: var(--accent-blue);
+    }
+
+    .music-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .music-control-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--outline-subtle);
+      color: var(--text-primary);
+      flex-shrink: 0;
+      transition: background 0.15s ease, transform 0.1s ease, color 0.15s ease;
+      cursor: pointer;
+    }
+
+    .music-pill:hover .music-control-btn {
+      background: var(--surface-container-highest);
+      color: var(--accent-spotify);
+    }
+
+    .music-control-btn:active {
+      transform: scale(0.9);
+    }
+
+    @media (max-width: 680px) {
+      .nav-links { display: none; }
+      .pill-right { display: none; }
+      .hero-title { font-size: 2.1rem; }
+      .tool-row { flex-direction: column; align-items: flex-start; }
+      .music-pill { bottom: 1rem; right: 1rem; padding: 0.45rem 0.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header>
+    <div class="nav-inner">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+          </svg>
+        </div>
+        <span>Spotify MCP</span>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#tools">Tools</a>
+        <a href="#compliance">2026 API</a>
+        <a href="#setup">Setup</a>
+        <a href="https://github.com/verisonSachin/spotifyMCP" target="_blank" rel="noopener" class="btn-chip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero with Gemini-styled Search Capsule -->
+  <section class="hero">
+    <h1 class="hero-title">Where should we start?</h1>
+
+    <!-- Gemini input pill -->
+    <div class="search-pill-container">
+      <div class="search-pill">
+        <div class="pill-left">
+          <span class="blue-dot"></span>
+          <span class="pill-prompt" id="pillPromptText">Create a 16-track playlist called "Emotional UK House"</span>
+        </div>
+        <div class="pill-right">
+          <div class="pill-model">
+            <span>Spotify MCP</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+          <div class="pill-mic">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Segmented action chips -->
+    <div class="action-chips">
+      <div class="chip active" onclick="showDemo('compound')">Build Playlist</div>
+      <div class="chip" onclick="showDemo('search')">Search Tracks</div>
+      <div class="chip" onclick="showDemo('library')">Save to Library</div>
+      <div class="chip" onclick="showDemo('playlists')">My Playlists</div>
+    </div>
+
+    <!-- Active Action Simulation Card -->
+    <div class="sim-card">
+      <div class="sim-header">
+        <span id="simToolName">spotify_mcp.tools &bull; build_playlist_from_list</span>
+        <div class="sim-status">
+          <span class="sim-status-dot"></span>
+          <span>stdio ready</span>
+        </div>
+      </div>
+      <div class="sim-body" id="simCodeOutput">
+<span class="sim-meta">// Concurrency: asyncio.Semaphore(4) | Fallback: unquoted artist + title</span>
+<span class="sim-tag">build_playlist_from_list</span>(
+  name=<span class="sim-highlight">"Emotional UK House"</span>,
+  tracks=[
+    { "artist": "Romy, Fred again..", "title": "Strong" },
+    { "artist": "Everything But The Girl", "title": "Nothing Left To Lose (Four Tet Remix)" },
+    <span class="sim-meta">/* ... 14 more tracks */</span>
+  ]
+)
+<span class="sim-meta">&rarr; 16 matched, 0 unmatched</span>
+<span class="sim-meta">&rarr; POST /v1/me/playlists &rarr; POST /v1/playlists/{id}/items</span>
+<span class="sim-highlight">&check; https://open.spotify.com/playlist/37i9dQZF1DX...</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture & Design Principles -->
+  <section class="container">
+    <div class="section-title-wrap">
+      <div class="section-label">Core Engineering</div>
+      <h2 class="section-heading">Built specifically for 2026 agent runtimes</h2>
+    </div>
+
+    <div class="grid-3">
+      <div class="minimal-card">
+        <h3>Zero Legacy Wrappers</h3>
+        <p>No <code>spotipy</code>, no Node.js subprocesses. Built on Python 3.10+ using <code>httpx</code> and official <code>mcp[cli]>=2,<3</code>.</p>
+      </div>
+
+      <div class="minimal-card">
+        <h3>Remix-Aware Matcher</h3>
+        <p>Normalizes artist credits (<code>Fred again..</code>), folds accents (<code>Böhmer &rarr; Bohmer</code>), and rewards requested remixes while filtering unwanted edits.</p>
+      </div>
+
+      <div class="minimal-card">
+        <h3>Proactive PKCE Auth</h3>
+        <p>Secure local PKCE authorization with automatic browser login. Atomic file updates to <code>tokens.json</code> (mode <code>0o600</code>) with <code>asyncio.Lock</code> rotation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- The 7 Tools Catalog -->
+  <section id="tools" class="container">
+    <div class="section-title-wrap">
+      <div class="section-label">Capabilities</div>
+      <h2 class="section-heading">The 7 MCP Tools</h2>
+    </div>
+
+    <div class="tool-list">
+      <div class="tool-row">
+        <div class="tool-main">
+          <div class="tool-title">build_playlist_from_list</div>
+          <div class="tool-desc">Single-turn composite workflow: concurrently resolves 1–100 tracks, creates the playlist, and batches items.</div>
+        </div>
+        <span class="tool-badge badge-comp">composite write</span>
+      </div>
+
+      <div class="tool-row">
+        <div class="tool-main">
+          <div class="tool-title">search_tracks</div>
+          <div class="tool-desc">Search Spotify catalog (limit 1–10). Returns compact URI, title, artist list, album, and duration.</div>
+        </div>
+        <span class="tool-badge badge-read">read-only</span>
+      </div>
+
+      <div class="tool-row">
+        <div class="tool-main">
+          <div class="tool-title">get_my_playlists</div>
+          <div class="tool-desc">List the authenticated user's playlists (limit 1–50) with total item counts.</div>
+        </div>
+        <span class="tool-badge badge-read">read-only</span>
+      </div>
+
+      <div class="tool-row">
+        <div class="tool-main">
+          <div class="tool-title">get_playlist_items</div>
+          <div class="tool-desc">Inspect playlist tracks using 2026 <code>/items</code> endpoint and <code>items[].item</code> payload structure.</div>
+        </div>
+        <span class="tool-badge badge-read">read-only</span>
+      </div>
+
+      <div class="tool-row">
+        <div class="tool-main">
+          <div class="tool-title">create_playlist</div>
+          <div class="tool-desc">Create private or public playlists via post-2026 <code>POST /v1/me/playlists</code>.</div>
+        </div>
+        <span class="tool-badge badge-write">write</span>
+      </div>
+
+      <div class="tool-row">
+        <div class="tool-main">
+          <div class="tool-title">add_playlist_items</div>
+          <div class="tool-desc">Append Spotify track URIs to a playlist, automatically chunked into 100-URI requests.</div>
+        </div>
+        <span class="tool-badge badge-write">write</span>
+      </div>
+
+      <div class="tool-row">
+        <div class="tool-main">
+          <div class="tool-title">save_to_library</div>
+          <div class="tool-desc">Save 1–40 track, album, or artist URIs to user's library using unified <code>PUT /v1/me/library</code>.</div>
+        </div>
+        <span class="tool-badge badge-read">idempotent write</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2026 API Migrations -->
+  <section id="compliance" class="container">
+    <div class="section-title-wrap">
+      <div class="section-label">Compliance</div>
+      <h2 class="section-heading">Post-February 2026 Web API Changes</h2>
+    </div>
+
+    <div class="migration-grid">
+      <div class="migration-item">
+        <div class="migration-label">Create Playlist</div>
+        <div class="migration-old">POST /v1/users/{id}/playlists</div>
+        <div class="migration-new">&check; POST /v1/me/playlists</div>
+      </div>
+
+      <div class="migration-item">
+        <div class="migration-label">Playlist Items Endpoint</div>
+        <div class="migration-old">GET/POST /v1/playlists/{id}/tracks</div>
+        <div class="migration-new">&check; GET/POST /v1/playlists/{id}/items</div>
+      </div>
+
+      <div class="migration-item">
+        <div class="migration-label">Playlist Item Object</div>
+        <div class="migration-old">payload.tracks[].track</div>
+        <div class="migration-new">&check; payload.items[].item</div>
+      </div>
+
+      <div class="migration-item">
+        <div class="migration-label">Save Library Items</div>
+        <div class="migration-old">PUT /v1/me/tracks, /v1/me/albums</div>
+        <div class="migration-new">&check; PUT /v1/me/library (unified URIs)</div>
+      </div>
+
+      <div class="migration-item">
+        <div class="migration-label">Search Request Limit</div>
+        <div class="migration-old">limit &le; 50</div>
+        <div class="migration-new">&check; limit &le; 10 (hard cap)</div>
+      </div>
+
+      <div class="migration-item">
+        <div class="migration-label">Deprecated Fields</div>
+        <div class="migration-old">track.popularity</div>
+        <div class="migration-new">&check; Zero dependency on removed keys</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Setup Section -->
+  <section id="setup" class="container">
+    <div class="section-title-wrap">
+      <div class="section-label">Quickstart</div>
+      <h2 class="section-heading">Connecting to Your MCP Client</h2>
+    </div>
+
+    <div class="setup-flow">
+      <div class="setup-card">
+        <div class="setup-header">
+          <span class="setup-step">Step 1</span>
+          <span class="setup-title">Register Spotify App</span>
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.92rem;margin-bottom:0.6rem;">
+          Create an app in the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener" style="color:var(--text-primary);text-decoration:underline;">Spotify Developer Dashboard</a>, configure your redirect URI as specified in <code>.env.example</code>, and note your Client ID.
+        </p>
+        <div class="setup-code">SPOTIFY_CLIENT_ID=your_client_id</div>
+      </div>
+
+      <div class="setup-card">
+        <div class="setup-header">
+          <span class="setup-step">Step 2</span>
+          <span class="setup-title">Clone & Authenticate</span>
+        </div>
+        <div class="setup-code">
+git clone https://github.com/verisonSachin/spotifyMCP.git<br>
+cd spotifyMCP<br>
+cp .env.example .env && nano .env<br>
+uv sync<br>
+uv run --env-file .env spotify-mcp-auth
+        </div>
+      </div>
+
+      <div class="setup-card">
+        <div class="setup-header">
+          <span class="setup-step">Step 3</span>
+          <span class="setup-title">Register in AI Agent Config</span>
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.92rem;margin-bottom:0.6rem;">
+          Add to <code>mcp_config.json</code> or <code>opencode.json</code>:
+        </p>
+        <div class="setup-code">
+{<br>
+&nbsp;&nbsp;"mcpServers": {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"spotify": {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"command": "uv",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"args": ["--directory", "/path/to/spotifyMCP", "run", "spotify-mcp"],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"env": { "SPOTIFY_CLIENT_ID": "your_client_id" }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>Spotify MCP &bull; Built with Python &bull; Model Context Protocol v2</p>
+    <p style="margin-top:0.4rem;">
+      <a href="https://github.com/verisonSachin/spotifyMCP" target="_blank" rel="noopener">GitHub</a> &bull;
+      <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">Model Context Protocol</a> &bull;
+      <a href="https://developer.spotify.com/documentation/web-api" target="_blank" rel="noopener">Spotify Web API</a>
+    </p>
+  </footer>
+
+  <!-- Floating Background Music Player (Dual-Deck Mini-DJ Crossfader) -->
+  <audio id="bgMusicA" preload="auto" crossorigin="anonymous"></audio>
+  <audio id="bgMusicB" preload="auto" crossorigin="anonymous"></audio>
+
+  <div class="music-pill" id="musicPill" onclick="toggleMusic(event)" role="button" tabindex="0" title="Play or pause background music (Space)">
+    <div class="equalizer" id="equalizer">
+      <span class="equalizer-bar"></span>
+      <span class="equalizer-bar"></span>
+      <span class="equalizer-bar"></span>
+      <span class="equalizer-bar"></span>
+    </div>
+    <div class="music-info">
+      <span class="music-track" id="musicTrack">Marshmello &mdash; Alone</span>
+      <span class="music-sub" id="musicStatus">Click to play</span>
+    </div>
+    <div class="music-actions">
+      <button class="music-control-btn" id="nextTrackBtn" aria-label="DJ mix next random song" title="DJ Mix next random song" onclick="nextRandomTrack(event)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 4 15 12 5 20 5 4"></polygon>
+          <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></line>
+        </svg>
+      </button>
+      <button class="music-control-btn" id="musicBtn" aria-label="Toggle playback" onclick="toggleMusic(event)">
+        <svg id="playIcon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <svg id="pauseIcon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+          <rect x="6" y="4" width="4" height="16"></rect>
+          <rect x="14" y="4" width="4" height="16"></rect>
+        </svg>
+      </button>
+    </div>
+    <div class="dj-mix-bar"><div class="dj-mix-fill" id="djMixFill"></div></div>
+  </div>
+
+  <script>const demos={compound:{prompt:'Create a 16-track playlist called "Emotional UK House"',tool:'spotify_mcp.tools \u2022 build_playlist_from_list',output:`<span class="sim-meta">// Concurrency: asyncio.Semaphore(4) | Fallback: unquoted artist + title</span>\n<span class="sim-tag">build_playlist_from_list</span>(\n  name=<span class="sim-highlight">"Emotional UK House"</span>,\n  tracks=[\n    { "artist": "Romy, Fred again..", "title": "Strong" },\n    { "artist": "Everything But The Girl", "title": "Nothing Left To Lose (Four Tet Remix)" },\n    <span class="sim-meta">/* ... 14 more tracks */</span>\n  ]\n)\n<span class="sim-meta">&rarr; 16 matched, 0 unmatched</span>\n<span class="sim-meta">&rarr; POST /v1/me/playlists &rarr; POST /v1/playlists/{id}/items</span>\n<span class="sim-highlight">&check; https://open.spotify.com/playlist/37i9dQZF1DX...</span>`},search:{prompt:'Search tracks: Bicep - Atlas',tool:'spotify_mcp.tools \u2022 search_tracks',output:`<span class="sim-meta">// GET /v1/search?q=Bicep%20Atlas&type=track&limit=1</span>\n<span class="sim-tag">search_tracks</span>(query="Bicep Atlas", limit=1)\n&rarr; [\n  {\n    "uri": <span class="sim-highlight">"spotify:track:664jA653qZ1snG9F"</span>,\n    "name": "Atlas",\n    "artists": ["Bicep"],\n    "album": "Isles",\n    "duration_ms": 352826\n  }\n]`},library:{prompt:'Save Isles by Bicep and Mid Air by Romy to my library',tool:'spotify_mcp.tools \u2022 save_to_library',output:`<span class="sim-meta">// PUT /v1/me/library (unified 2026 endpoint)</span>\n<span class="sim-tag">save_to_library</span>(\n  uris=[\n    "spotify:album:1kMvR5Q5nKx...",\n    "spotify:album:4hD2f9LzQpW..."\n  ]\n)\n<span class="sim-highlight">&check; { "saved_count": 2, "uris": [...] }</span>`},playlists:{prompt:'List my top 5 playlists',tool:'spotify_mcp.tools \u2022 get_my_playlists',output:`<span class="sim-meta">// GET /v1/me/playlists?limit=5</span>\n<span class="sim-tag">get_my_playlists</span>(limit=5)\n&rarr; [\n  { "id": "37i9dQZF1E37...", "name": "Deep Focus", "item_count": 84, "public": false },\n  { "id": "37i9dQZF1DX0...", "name": "Late Night House", "item_count": 62, "public": true }\n]`}};function showDemo(key){document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));event.target.classList.add('active');const d=demos[key];if(!d)return;document.getElementById('pillPromptText').innerText=d.prompt;document.getElementById('simToolName').innerText=d.tool;document.getElementById('simCodeOutput').innerHTML=d.output;}const PLAYLIST=[{artist:"Marshmello",title:"Alone",genre:"Future Bass",bpm:142,introOffset:13,query:"Marshmello Alone",fallbackSrc:"https://archive.org/download/Playlist_201705/Marshmello%20-%20Alone%20%28Lyric%20Video%29.mp3",src:"https://archive.org/download/Playlist_201705/Marshmello%20-%20Alone%20%28Lyric%20Video%29.mp3"},{artist:"Romy, Fred again..",title:"Strong",genre:"Emotional UK House",bpm:134,introOffset:0,query:"Romy Fred again Strong",fallbackSrc:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/8f/d2/8b/8fd28b76-e0c2-a59e-89f2-1a1f24d38d0f/mzaf_1491181766237467526.plus.aac.p.m4a",src:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/06/0f/b5/060fb511-d0c5-c521-9db9-940d17b0f965/mzaf_11899324672393676494.plus.aac.p.m4a"},{artist:"Kygo ft. Conrad Sewell",title:"Firestone",genre:"Melodic EDM",bpm:106,introOffset:0,query:"Kygo Firestone",fallbackSrc:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview126/v4/e4/44/4b/e4444b9d-427b-af25-80c2-3767ef0cc5d9/mzaf_8962167650813264441.plus.aac.p.m4a",src:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/eb/85/38/eb853819-1b4e-038c-363e-7ded860bd186/mzaf_7393949401897117845.plus.aac.p.m4a"},{artist:"Alan Walker",title:"Faded",genre:"Melodic EDM",bpm:90,introOffset:0,query:"Alan Walker Faded",fallbackSrc:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/ed/c4/6a/edc46a79-a961-2a76-5688-c2db7e949010/mzaf_9784907124217458161.plus.aac.p.m4a",src:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/ab/18/d9/ab18d9e9-01f0-27ea-3a51-6e08585a0072/mzaf_14299744081264843911.plus.aac.p.m4a"},{artist:"Avicii",title:"Waiting For Love",genre:"Melodic EDM",bpm:128,introOffset:0,query:"Avicii Waiting For Love",fallbackSrc:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/cf/48/8e/cf488e18-65ab-e66f-16b9-f3f47e1e4138/mzaf_15510145229285682495.plus.aac.p.m4a",src:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/c0/69/ab/c069ab0f-1f89-8636-8579-2e5df6e62a68/mzaf_16059040705385155103.plus.aac.p.m4a"},{artist:"The Chainsmokers ft. ROZES",title:"Roses",genre:"Future Bass",bpm:100,introOffset:0,query:"Chainsmokers Roses",fallbackSrc:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/08/6b/43/086b4370-5d34-df03-e9ec-2ba29fabe756/mzaf_6711524251891061020.plus.aac.p.m4a",src:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/53/55/a3/5355a39b-3de3-7f8c-a78b-108a9e5322c6/mzaf_1619770748986638926.plus.aac.p.m4a"},{artist:"ODESZA ft. Zyra",title:"Say My Name",genre:"Melodic Electronic",bpm:115,introOffset:0,query:"ODESZA Say My Name",fallbackSrc:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/79/34/f7/7934f794-304c-5a9f-1805-0be06712e70d/mzaf_177661742863746170.plus.aac.p.m4a",src:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/7b/a8/de/7ba8dee7-2146-e403-ee04-d9ad6b8a17b1/mzaf_1843147315490267895.plus.aac.p.m4a"},{artist:"Martin Garrix & Dua Lipa",title:"Scared To Be Lonely",genre:"Melodic EDM",bpm:138,introOffset:0,query:"Martin Garrix Scared To Be Lonely",fallbackSrc:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/84/b7/8b/84b78b3a-bb87-88d2-c36f-0a43e0fafeef/mzaf_13871132869080298962.plus.aac.p.m4a",src:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/e9/d2/2c/e9d22c56-3587-d55c-e96c-456d65629f73/mzaf_8294006456926904310.plus.aac.p.m4a"},{artist:"Flume ft. Kai",title:"Never Be Like You",genre:"Future Bass",bpm:120,introOffset:0,query:"Flume Never Be Like You Kai",fallbackSrc:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/2a/2c/e7/2a2ce78d-faae-058c-10e9-4a4cdc784229/mzaf_3762171300833903840.plus.aac.p.m4a",src:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/9e/65/21/9e652177-0411-51ba-699c-40652ebdac48/mzaf_3212579135378757284.plus.aac.p.m4a"},{artist:"KATO & Jon",title:"Turn the Lights Off",genre:"EDM / Dance",bpm:128,introOffset:15,query:"KATO Turn the Lights Off",fallbackSrc:"https://archive.org/download/kato-feat.-jon-turn-the-lights-off-house-remix-jon-hamm-dance-scene-ksonka-dj-youtube-1/Kato%20Feat.%20Jon%20-%20Turn%20The%20Lights%20Off%20%28House%20Remix%29%20-%20Jon%20Hamm%20Dance%20Scene%20-%20KSonka%20dj%20%28youtube%29%20%281%29.mp3",src:"https://archive.org/download/DjJoseKato-TurnTheLightsOffFeat.Jon/djJoseKato-TurnTheLightsOffFeat.Jon.mp3"},{artist:"Calvin Harris",title:"Summer",genre:"Feel-Good EDM",bpm:128,introOffset:0,query:"Calvin Harris Summer",fallbackSrc:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/a0/4b/6f/a04b6f06-2710-87ea-9f7a-f1df61bf8c9f/mzaf_3755017789552186866.plus.aac.p.m4a",src:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/c3/32/f1/c332f138-aa3c-52b8-c414-e85111b58bf5/mzaf_12226515580236242706.plus.aac.p.m4a"}];const deckA=document.getElementById('bgMusicA');const deckB=document.getElementById('bgMusicB');const musicPill=document.getElementById('musicPill');const musicTrack=document.getElementById('musicTrack');const musicStatus=document.getElementById('musicStatus');const playIcon=document.getElementById('playIcon');const pauseIcon=document.getElementById('pauseIcon');const djMixFill=document.getElementById('djMixFill');const eqBars=Array.from(document.querySelectorAll('#equalizer .equalizer-bar'));let activeDeck=deckA;let standbyDeck=deckB;let isPlaying=false;let isCrossfading=false;let fadeTimer=null;let crossfadeRaf=null;let eqRaf=null;let transitionId=0;let currentTrackIdx=-1;const TARGET_VOLUME=0.36;const AUTO_MIX_TRIGGER_SEC=4.6;const AUTO_CROSSFADE_MS=4500;const SKIP_CROSSFADE_MS=3500;const DROP_POINT=0.76;let audioCtx=null;let masterGain=null;let masterCompressor=null;let convolverNode=null;let convolverWetReturn=null;let fxBusGain=null;let analyserNode=null;let fftData=null;let noiseBuffer=null;const deckDSP=new WeakMap();const activeFXNodes=new Set();function createNoiseBuffer(ctx,durationSec=4.5){const length=Math.floor(ctx.sampleRate*durationSec);const buffer=ctx.createBuffer(2,length,ctx.sampleRate);for(let ch=0;ch<2;ch++){const data=buffer.getChannelData(ch);for(let i=0;i<length;i++){data[i]=Math.random()*2-1;}}return buffer;}function createReverbImpulse(ctx,durationSec=2.7,decay=3.1){const rate=ctx.sampleRate;const length=Math.floor(rate*durationSec);const preDelaySamples=Math.floor(rate*0.018);const impulse=ctx.createBuffer(2,length,rate);for(let ch=0;ch<2;ch++){const channel=impulse.getChannelData(ch);let lp=0;for(let i=0;i<length;i++){if(i<preDelaySamples){channel[i]=0;continue;}const t=(i-preDelaySamples)/(length-preDelaySamples);const env=Math.pow(1-t,decay)*(1-Math.exp(-t*45));const white=Math.random()*2-1;lp=lp*0.58+white*0.42;channel[i]=lp*env;}}return impulse;}function buildDeckGraph(deck){if(!audioCtx||deckDSP.has(deck))return deckDSP.get(deck);const source=audioCtx.createMediaElementSource(deck);const bassEQ=audioCtx.createBiquadFilter();bassEQ.type='lowshelf';bassEQ.frequency.value=150;bassEQ.gain.value=0;const djFilter=audioCtx.createBiquadFilter();djFilter.type='lowpass';djFilter.frequency.value=20000;djFilter.Q.value=0.7;const dryGain=audioCtx.createGain();dryGain.gain.value=1.0;const reverbSendGain=audioCtx.createGain();reverbSendGain.gain.value=0.0;source.connect(bassEQ);bassEQ.connect(djFilter);djFilter.connect(dryGain);djFilter.connect(reverbSendGain);dryGain.connect(masterCompressor);reverbSendGain.connect(convolverNode);const graph={source,bassEQ,djFilter,dryGain,reverbSendGain};deckDSP.set(deck,graph);return graph;}function ensureDJEngine(fromUserGesture=false){const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return false;if(!audioCtx){if(!fromUserGesture)return false;try{audioCtx=new AudioCtx();masterCompressor=audioCtx.createDynamicsCompressor();masterCompressor.threshold.value=-10;masterCompressor.knee.value=12;masterCompressor.ratio.value=6;masterCompressor.attack.value=0.003;masterCompressor.release.value=0.18;masterGain=audioCtx.createGain();masterGain.gain.value=TARGET_VOLUME;analyserNode=audioCtx.createAnalyser();analyserNode.fftSize=64;analyserNode.smoothingTimeConstant=0.72;fftData=new Uint8Array(analyserNode.frequencyBinCount);convolverNode=audioCtx.createConvolver();convolverNode.buffer=createReverbImpulse(audioCtx,2.7,3.1);convolverWetReturn=audioCtx.createGain();convolverWetReturn.gain.value=0.85;const reverbToneFilter=audioCtx.createBiquadFilter();reverbToneFilter.type='lowpass';reverbToneFilter.frequency.value=6200;fxBusGain=audioCtx.createGain();fxBusGain.gain.value=1.0;noiseBuffer=createNoiseBuffer(audioCtx,5.0);convolverNode.connect(reverbToneFilter);reverbToneFilter.connect(convolverWetReturn);convolverWetReturn.connect(masterCompressor);fxBusGain.connect(masterCompressor);masterCompressor.connect(masterGain);masterGain.connect(analyserNode);analyserNode.connect(audioCtx.destination);buildDeckGraph(deckA);buildDeckGraph(deckB);deckA.volume=1.0;deckB.volume=1.0;}catch(err){audioCtx=null;return false;}}if(fromUserGesture&&audioCtx.state==='suspended'){audioCtx.resume().catch(()=>{});}return Boolean(audioCtx&&audioCtx.state!=='closed');}function resetDeckDSP(deck,targetDry=1.0){const g=deckDSP.get(deck);if(!g||!audioCtx)return;const now=audioCtx.currentTime;g.bassEQ.gain.cancelScheduledValues(now);g.djFilter.frequency.cancelScheduledValues(now);g.djFilter.Q.cancelScheduledValues(now);g.dryGain.gain.cancelScheduledValues(now);g.reverbSendGain.gain.cancelScheduledValues(now);g.bassEQ.gain.setValueAtTime(0,now);g.djFilter.type='lowpass';g.djFilter.frequency.setValueAtTime(20000,now);g.djFilter.Q.setValueAtTime(0.7,now);g.dryGain.gain.setValueAtTime(targetDry,now);g.reverbSendGain.gain.setValueAtTime(0,now);}function stopActiveFX(){activeFXNodes.forEach((node)=>{try{if(typeof node.stop==='function')node.stop();}catch(e){}try{node.disconnect();}catch(e){}});activeFXNodes.clear();}function registerFXNode(node){activeFXNodes.add(node);if('onended'in node){node.onended=()=>{activeFXNodes.delete(node);try{node.disconnect();}catch(e){}};}return node;}function scheduleSnareHit(hitTime,level){if(!audioCtx||!fxBusGain||!noiseBuffer)return;const nSrc=registerFXNode(audioCtx.createBufferSource());nSrc.buffer=noiseBuffer;const hp=registerFXNode(audioCtx.createBiquadFilter());hp.type='highpass';hp.frequency.setValueAtTime(1600,hitTime);const nGain=registerFXNode(audioCtx.createGain());nGain.gain.setValueAtTime(0.0001,hitTime);nGain.gain.linearRampToValueAtTime(level*0.65,hitTime+0.004);nGain.gain.exponentialRampToValueAtTime(0.0001,hitTime+0.11);nSrc.connect(hp);hp.connect(nGain);nGain.connect(fxBusGain);if(convolverNode){const revTap=registerFXNode(audioCtx.createGain());revTap.gain.setValueAtTime(0.28,hitTime);nGain.connect(revTap);revTap.connect(convolverNode);}const osc=registerFXNode(audioCtx.createOscillator());osc.type='triangle';osc.frequency.setValueAtTime(210,hitTime);osc.frequency.exponentialRampToValueAtTime(115,hitTime+0.07);const oGain=registerFXNode(audioCtx.createGain());oGain.gain.setValueAtTime(level*0.45,hitTime);oGain.gain.exponentialRampToValueAtTime(0.0001,hitTime+0.075);osc.connect(oGain);oGain.connect(fxBusGain);nSrc.start(hitTime);nSrc.stop(hitTime+0.14);osc.start(hitTime);osc.stop(hitTime+0.09);}function scheduleBeatDropImpact(dropTime){if(!audioCtx||!fxBusGain||!noiseBuffer)return;const subOsc=registerFXNode(audioCtx.createOscillator());subOsc.type='sine';subOsc.frequency.setValueAtTime(145,dropTime);subOsc.frequency.exponentialRampToValueAtTime(42,dropTime+0.34);const subGain=registerFXNode(audioCtx.createGain());subGain.gain.setValueAtTime(0.0001,dropTime);subGain.gain.linearRampToValueAtTime(0.55,dropTime+0.012);subGain.gain.exponentialRampToValueAtTime(0.0001,dropTime+0.62);subOsc.connect(subGain);subGain.connect(fxBusGain);subOsc.start(dropTime);subOsc.stop(dropTime+0.65);const clickOsc=registerFXNode(audioCtx.createOscillator());clickOsc.type='triangle';clickOsc.frequency.setValueAtTime(820,dropTime);clickOsc.frequency.exponentialRampToValueAtTime(120,dropTime+0.032);const clickGain=registerFXNode(audioCtx.createGain());clickGain.gain.setValueAtTime(0.24,dropTime);clickGain.gain.exponentialRampToValueAtTime(0.0001,dropTime+0.038);clickOsc.connect(clickGain);clickGain.connect(fxBusGain);clickOsc.start(dropTime);clickOsc.stop(dropTime+0.045);const downNoise=registerFXNode(audioCtx.createBufferSource());downNoise.buffer=noiseBuffer;const downFilter=registerFXNode(audioCtx.createBiquadFilter());downFilter.type='lowpass';downFilter.frequency.setValueAtTime(5200,dropTime);downFilter.frequency.exponentialRampToValueAtTime(160,dropTime+0.95);const downGain=registerFXNode(audioCtx.createGain());downGain.gain.setValueAtTime(0.22,dropTime);downGain.gain.exponentialRampToValueAtTime(0.0001,dropTime+0.98);downNoise.connect(downFilter);downFilter.connect(downGain);downGain.connect(fxBusGain);if(convolverNode){const downRev=registerFXNode(audioCtx.createGain());downRev.gain.setValueAtTime(0.45,dropTime);downGain.connect(downRev);downRev.connect(convolverNode);}downNoise.start(dropTime);downNoise.stop(dropTime+1.0);}function scheduleDJTransitionFX(bpm,durationMs,dropRatio){if(!audioCtx||!fxBusGain||!noiseBuffer)return;stopActiveFX();const now=audioCtx.currentTime;const durSec=durationMs/1000;const dropSec=durSec*dropRatio;const cutSec=Math.max(0.4,dropSec-0.14);const riserNoise=registerFXNode(audioCtx.createBufferSource());riserNoise.buffer=noiseBuffer;const riserBP=registerFXNode(audioCtx.createBiquadFilter());riserBP.type='bandpass';riserBP.Q.setValueAtTime(3.6,now);riserBP.frequency.setValueAtTime(260,now);riserBP.frequency.exponentialRampToValueAtTime(7200,now+cutSec);const riserGain=registerFXNode(audioCtx.createGain());riserGain.gain.setValueAtTime(0.0001,now);riserGain.gain.linearRampToValueAtTime(0.18,now+cutSec*0.85);riserGain.gain.linearRampToValueAtTime(0.22,now+cutSec-0.02);riserGain.gain.exponentialRampToValueAtTime(0.0001,now+cutSec+0.02);riserNoise.connect(riserBP);riserBP.connect(riserGain);riserGain.connect(fxBusGain);if(convolverNode){const riserRev=registerFXNode(audioCtx.createGain());riserRev.gain.setValueAtTime(0.35,now);riserGain.connect(riserRev);riserRev.connect(convolverNode);}riserNoise.start(now);riserNoise.stop(now+cutSec+0.05);const pitchLP=registerFXNode(audioCtx.createBiquadFilter());pitchLP.type='lowpass';pitchLP.Q.setValueAtTime(2.5,now);pitchLP.frequency.setValueAtTime(380,now);pitchLP.frequency.exponentialRampToValueAtTime(2400,now+cutSec);const pitchGain=registerFXNode(audioCtx.createGain());pitchGain.gain.setValueAtTime(0.0001,now);pitchGain.gain.linearRampToValueAtTime(0.065,now+cutSec*0.9);pitchGain.gain.exponentialRampToValueAtTime(0.0001,now+cutSec+0.02);[-6,6].forEach((detune)=>{const osc=registerFXNode(audioCtx.createOscillator());osc.type=detune<0?'sawtooth':'triangle';osc.detune.setValueAtTime(detune,now);osc.frequency.setValueAtTime(196,now);osc.frequency.exponentialRampToValueAtTime(587,now+cutSec);osc.connect(pitchLP);osc.start(now);osc.stop(now+cutSec+0.04);});pitchLP.connect(pitchGain);pitchGain.connect(fxBusGain);const beatSec=60/Math.max(90,Math.min(155,bpm||128));let cursor=now+Math.min(0.45,durSec*0.14);const rollEnd=now+cutSec-0.03;while(cursor<rollEnd){const frac=(cursor-now)/cutSec;let stepSec=beatSec*0.5;let hitVol=0.11;if(frac>0.72){stepSec=beatSec*0.125;hitVol=0.24;}else if(frac>0.45){stepSec=beatSec*0.25;hitVol=0.17;}scheduleSnareHit(cursor,hitVol);cursor+=stepSec;}scheduleBeatDropImpact(now+dropSec);}function updateEqualizerLoop(){if(!isPlaying){musicPill.classList.remove('fft-active');eqBars.forEach((b)=>{b.style.height='';});eqRaf=null;return;}if(analyserNode&&fftData&&audioCtx&&audioCtx.state==='running'){musicPill.classList.add('fft-active');analyserNode.getByteFrequencyData(fftData);const bandIndices=[1,4,9,16];for(let i=0;i<eqBars.length;i++){const val=fftData[bandIndices[i]]||0;const h=Math.max(3,Math.min(14,3+(val/255)*12));eqBars[i].style.height=`${h.toFixed(1)}px`;}}else{musicPill.classList.remove('fft-active');eqBars.forEach((b)=>{b.style.height='';});}eqRaf=requestAnimationFrame(updateEqualizerLoop);}async function resolveAudioPreviews(){for(const track of PLAYLIST){if(track.query&&!track.src){try{const resp=await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(track.query)}&entity=song&limit=1`);if(resp.ok){const json=await resp.json();if(json.results&&json.results.length>0&&json.results[0].previewUrl){track.src=json.results[0].previewUrl;if(currentTrackIdx!==-1&&PLAYLIST[currentTrackIdx]===track&&activeDeck){const wasPlaying=isPlaying;activeDeck.src=track.src;if(wasPlaying){activeDeck.play().catch(()=>{});}}}}}catch(e){}}}}function getNextRandomIndex(){if(PLAYLIST.length<=1)return 0;let nextIdx;do{nextIdx=Math.floor(Math.random()*PLAYLIST.length);}while(nextIdx===currentTrackIdx);return nextIdx;}function setTrackInfoUI(track){if(musicTrack){musicTrack.innerHTML=`${track.artist} &mdash; ${track.title}`;}if(musicPill){musicPill.setAttribute('title',`Track: ${track.artist} - ${track.title} (${track.genre} • ${track.bpm} BPM)`);}}function applyIntroOffset(deck,track){if(!deck||!track||!track.introOffset)return;const trySeek=()=>{if(Number.isFinite(deck.duration)&&deck.duration>track.introOffset+25){try{deck.currentTime=track.introOffset;}catch(e){}}};if(deck.readyState>=1){trySeek();}else{deck.addEventListener('loadedmetadata',trySeek,{once:true});}}function loadTrackOnDeck(deck,idx,useFallback=false){const track=PLAYLIST[idx];const targetSrc=(useFallback&&track.fallbackSrc)?track.fallbackSrc:(track.src||track.fallbackSrc);if(deck&&targetSrc){deck.dataset.trackIdx=String(idx);deck.dataset.usedFallback=useFallback?'1':'0';deck.src=targetSrc;deck.load();applyIntroOffset(deck,track);}}function loadTrack(idx){currentTrackIdx=idx;setTrackInfoUI(PLAYLIST[idx]);loadTrackOnDeck(activeDeck,idx,false);}function getIdleStatusLabel(){const track=PLAYLIST[currentTrackIdx];const bpm=track?.bpm?`${track.bpm} BPM \u2022 `:'';return audioCtx?`${bpm}Mini-DJ Active`:`${bpm}Ambient BGM`;}function updatePlayerUI(active,statusOverride=null){isPlaying=active;if(active){musicPill.classList.add('playing');playIcon.style.display='none';pauseIcon.style.display='block';musicStatus.textContent=statusOverride||getIdleStatusLabel();if(!eqRaf){eqRaf=requestAnimationFrame(updateEqualizerLoop);}}else{musicPill.classList.remove('playing','mixing','beat-drop','fft-active');if(djMixFill)djMixFill.style.width='0%';eqBars.forEach((b)=>{b.style.height='';});if(eqRaf){cancelAnimationFrame(eqRaf);eqRaf=null;}playIcon.style.display='block';pauseIcon.style.display='none';musicStatus.textContent=statusOverride||'Paused';}}function clearActiveAnimations(){if(fadeTimer){clearInterval(fadeTimer);fadeTimer=null;}if(crossfadeRaf){cancelAnimationFrame(crossfadeRaf);crossfadeRaf=null;}stopActiveFX();isCrossfading=false;musicPill.classList.remove('mixing','beat-drop');if(djMixFill)djMixFill.style.width='0%';}function startPlayback(withFade=true,fromUserGesture=false){if(!activeDeck)return;if(currentTrackIdx===-1){loadTrack(getNextRandomIndex());}const dspReady=ensureDJEngine(fromUserGesture);clearActiveAnimations();updatePlayerUI(true);if(dspReady&&audioCtx){resetDeckDSP(activeDeck,withFade?0.0:1.0);resetDeckDSP(standbyDeck,0.0);activeDeck.volume=1.0;}else{activeDeck.volume=withFade?0:TARGET_VOLUME;}const playPromise=activeDeck.play();if(playPromise!==undefined){playPromise.then(()=>{if(dspReady&&audioCtx){const g=deckDSP.get(activeDeck);if(g){const t=audioCtx.currentTime;g.dryGain.gain.cancelScheduledValues(t);if(withFade){g.dryGain.gain.setValueAtTime(0.0,t);g.dryGain.gain.linearRampToValueAtTime(1.0,t+1.1);}else{g.dryGain.gain.setValueAtTime(1.0,t);}}}else if(withFade){fadeTimer=setInterval(()=>{if(!isPlaying||isCrossfading){clearInterval(fadeTimer);fadeTimer=null;return;}if(activeDeck.volume<TARGET_VOLUME){activeDeck.volume=Math.min(TARGET_VOLUME,activeDeck.volume+0.03);}else{clearInterval(fadeTimer);fadeTimer=null;}},60);}}).catch(()=>{updatePlayerUI(false,'Click to enable audio');});}}function stopPlayback(){transitionId++;clearActiveAnimations();updatePlayerUI(false);if(deckA)deckA.pause();if(deckB)deckB.pause();}function djCrossfadeTo(nextIdx,durationMs,fromUserGesture=false){if(!activeDeck||!standbyDeck)return;const myTransition=++transitionId;const dspReady=ensureDJEngine(fromUserGesture);clearActiveAnimations();isCrossfading=true;const outgoing=activeDeck;const incoming=standbyDeck;const nextTrack=PLAYLIST[nextIdx];const outgoingStartVol=outgoing.volume>0?outgoing.volume:TARGET_VOLUME;currentTrackIdx=nextIdx;setTrackInfoUI(nextTrack);loadTrackOnDeck(incoming,nextIdx,false);if(dspReady){outgoing.volume=1.0;incoming.volume=1.0;resetDeckDSP(outgoing,1.0);resetDeckDSP(incoming,0.0);const outGraph=deckDSP.get(outgoing);const inGraph=deckDSP.get(incoming);if(outGraph){outGraph.djFilter.type='highpass';outGraph.djFilter.frequency.setValueAtTime(25,audioCtx.currentTime);outGraph.djFilter.Q.setValueAtTime(2.6,audioCtx.currentTime);}if(inGraph){inGraph.djFilter.type='lowpass';inGraph.djFilter.frequency.setValueAtTime(320,audioCtx.currentTime);inGraph.djFilter.Q.setValueAtTime(2.2,audioCtx.currentTime);inGraph.reverbSendGain.gain.setValueAtTime(0.32,audioCtx.currentTime);}}else{incoming.volume=0;}musicPill.classList.add('mixing');updatePlayerUI(true,'Convolver Wash...');const startIncoming=()=>{if(myTransition!==transitionId||!isPlaying)return;const startTime=performance.now();let dropFired=false;const dspActive=Boolean(dspReady&&audioCtx&&audioCtx.state==='running');if(dspActive){scheduleDJTransitionFX(nextTrack.bpm,durationMs,DROP_POINT);const outG=deckDSP.get(outgoing);const inG=deckDSP.get(incoming);const t0=audioCtx.currentTime;const durSec=durationMs/1000;const tWash=t0+durSec*0.42;const tCut=t0+durSec*0.72;const tDrop=t0+durSec*DROP_POINT;const tEnd=t0+durSec;if(outG){outG.reverbSendGain.gain.setValueAtTime(0.0,t0);outG.reverbSendGain.gain.linearRampToValueAtTime(0.95,tWash);outG.reverbSendGain.gain.setValueAtTime(0.95,tDrop);outG.reverbSendGain.gain.linearRampToValueAtTime(0.0,tEnd);outG.bassEQ.gain.setValueAtTime(0,t0);outG.bassEQ.gain.linearRampToValueAtTime(-16,tWash);outG.djFilter.frequency.setValueAtTime(25,t0);outG.djFilter.frequency.exponentialRampToValueAtTime(980,tWash);outG.djFilter.frequency.exponentialRampToValueAtTime(2600,tCut);outG.dryGain.gain.setValueAtTime(1.0,t0);outG.dryGain.gain.linearRampToValueAtTime(0.55,tWash);outG.dryGain.gain.linearRampToValueAtTime(0.04,tCut);outG.dryGain.gain.linearRampToValueAtTime(0.0,tDrop);}if(inG){inG.dryGain.gain.setValueAtTime(0.0,t0);inG.dryGain.gain.linearRampToValueAtTime(0.45,tCut);inG.dryGain.gain.linearRampToValueAtTime(0.24,tDrop-0.02);inG.dryGain.gain.linearRampToValueAtTime(1.0,tDrop+0.02);inG.djFilter.frequency.setValueAtTime(320,t0);inG.djFilter.frequency.exponentialRampToValueAtTime(1650,tCut);inG.djFilter.frequency.exponentialRampToValueAtTime(20000,tDrop+0.06);inG.djFilter.Q.setValueAtTime(2.2,t0);inG.djFilter.Q.linearRampToValueAtTime(0.7,tDrop+0.12);inG.reverbSendGain.gain.setValueAtTime(0.32,t0);inG.reverbSendGain.gain.setValueAtTime(0.32,tDrop);inG.reverbSendGain.gain.linearRampToValueAtTime(0.0,tDrop+0.25);inG.bassEQ.gain.setValueAtTime(-4,t0);inG.bassEQ.gain.linearRampToValueAtTime(3.5,tDrop+0.02);inG.bassEQ.gain.linearRampToValueAtTime(0,tDrop+0.65);}}const step=(now)=>{if(myTransition!==transitionId||!isPlaying){isCrossfading=false;return;}const progress=Math.min(1,(now-startTime)/durationMs);if(djMixFill)djMixFill.style.width=`${(progress*100).toFixed(1)}%`;if(progress<0.24){musicStatus.textContent='Convolver Wash...';}else if(progress<0.70){musicStatus.textContent='Beat Build + Riser';}else if(progress<DROP_POINT){musicStatus.textContent='Drop Ready...';}else{if(!dropFired){dropFired=true;musicPill.classList.remove('mixing');musicPill.classList.add('beat-drop');}musicStatus.textContent='Beat Drop!';}if(!dspReady){const outGain=Math.cos(progress*Math.PI*0.5);const inGain=Math.sin(progress*Math.PI*0.5);outgoing.volume=Math.max(0,Math.min(1,outgoingStartVol*outGain));incoming.volume=Math.max(0,Math.min(TARGET_VOLUME,TARGET_VOLUME*inGain));}if(progress<1){crossfadeRaf=requestAnimationFrame(step);}else{outgoing.pause();outgoing.currentTime=0;if(dspReady){resetDeckDSP(outgoing,0.0);resetDeckDSP(incoming,1.0);incoming.volume=1.0;}else{outgoing.volume=0;incoming.volume=TARGET_VOLUME;}activeDeck=incoming;standbyDeck=outgoing;isCrossfading=false;crossfadeRaf=null;musicPill.classList.remove('mixing','beat-drop');if(djMixFill)djMixFill.style.width='0%';if(isPlaying){musicStatus.textContent=getIdleStatusLabel();}}};crossfadeRaf=requestAnimationFrame(step);};const resumePromise=(dspReady&&audioCtx&&audioCtx.state==='suspended')?audioCtx.resume().catch(()=>{}):Promise.resolve();const playPromise=incoming.play();Promise.all([resumePromise,playPromise!==undefined?playPromise:Promise.resolve()]).then(startIncoming).catch(()=>{outgoing.pause();activeDeck=incoming;standbyDeck=outgoing;isCrossfading=false;startPlayback(true,fromUserGesture);});}function toggleMusic(e){if(e)e.stopPropagation();if(isPlaying||(activeDeck&&!activeDeck.paused&&activeDeck.currentTime>0)){stopPlayback();}else{startPlayback(true,true);}}function nextRandomTrack(e){if(e)e.stopPropagation();const nextIdx=getNextRandomIndex();if(isPlaying&&activeDeck&&!activeDeck.paused){djCrossfadeTo(nextIdx,SKIP_CROSSFADE_MS,true);}else{loadTrack(nextIdx);startPlayback(true,true);}}
+[deckA,deckB].forEach((deck)=>{if(!deck)return;deck.addEventListener('timeupdate',()=>{if(deck!==activeDeck||!isPlaying||isCrossfading)return;if(Number.isFinite(deck.duration)&&deck.duration>AUTO_MIX_TRIGGER_SEC*2){const remaining=deck.duration-deck.currentTime;if(remaining>0&&remaining<=AUTO_MIX_TRIGGER_SEC){djCrossfadeTo(getNextRandomIndex(),AUTO_CROSSFADE_MS,false);}}});deck.addEventListener('ended',()=>{if(deck===activeDeck&&!isCrossfading&&isPlaying){djCrossfadeTo(getNextRandomIndex(),SKIP_CROSSFADE_MS,false);}});deck.addEventListener('error',()=>{const idx=Number(deck.dataset.trackIdx);if(Number.isNaN(idx))return;if(deck.dataset.usedFallback!=='1'&&PLAYLIST[idx]?.fallbackSrc){const shouldResume=(deck===activeDeck&&isPlaying)||isCrossfading;loadTrackOnDeck(deck,idx,true);if(shouldResume){deck.play().catch(()=>{});}}else if(deck.hasAttribute('crossorigin')&&!deckDSP.has(deck)){deck.removeAttribute('crossorigin');loadTrackOnDeck(deck,idx,false);if(deck===activeDeck&&isPlaying){deck.play().catch(()=>{});}}});});if(musicPill){musicPill.addEventListener('keydown',(e)=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();toggleMusic(e);}});}window.addEventListener('DOMContentLoaded',()=>{resolveAudioPreviews();loadTrack(getNextRandomIndex());startPlayback(true,false);const startOnInteraction=()=>{const unlocked=ensureDJEngine(true);if(!isPlaying&&activeDeck&&activeDeck.paused){startPlayback(true,true);}else if(unlocked&&isPlaying){resetDeckDSP(activeDeck,1.0);musicStatus.textContent=getIdleStatusLabel();}window.removeEventListener('pointerdown',startOnInteraction);window.removeEventListener('click',startOnInteraction);window.removeEventListener('keydown',startOnInteraction);};window.addEventListener('pointerdown',startOnInteraction);window.addEventListener('click',startOnInteraction);window.addEventListener('keydown',startOnInteraction);});</script>
+</body>
+</html>
